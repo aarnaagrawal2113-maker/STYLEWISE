@@ -106,8 +106,8 @@ export default function Home() {
       : items.filter((item) => item.category === activeCategory),
     [items, activeCategory]
   );
-  const selectedItems = useMemo(
-    () => selected.length ? items.filter((item) => selected.includes(item.id)) : items,
+  const anchorItems = useMemo(
+    () => items.filter((item) => selected.includes(item.id)),
     [items, selected]
   );
 
@@ -209,28 +209,54 @@ export default function Home() {
   }
 
   function generateOutfits() {
-    const pool = selectedItems;
-    if (pool.length < 2) {
-      setNotice("Add at least two clothing pieces to create combinations.");
+    if (items.length < 2) {
+      setNotice("Add at least two wardrobe pieces to create combinations.");
       return;
     }
 
-    const tops = pool.filter((item) => item.category === "Tops");
-    const bottoms = pool.filter((item) => item.category === "Bottoms");
-    const shoes = pool.filter((item) => item.category === "Shoes");
-    const addOns = pool.filter((item) =>
+    // Selected pieces are anchors: every generated look keeps them and pairs
+    // them with other items from the full wardrobe.
+    const anchors = anchorItems;
+    const anchoredIds = new Set(anchors.map((item) => item.id));
+    const tops = items.filter((item) => item.category === "Tops");
+    const bottoms = items.filter((item) => item.category === "Bottoms");
+    const shoes = items.filter((item) => item.category === "Shoes");
+    const addOns = items.filter((item) =>
       ["Bags", "Jewellery", "Accessories"].includes(item.category)
     );
+
+    const anchorTops = anchors.filter((item) => item.category === "Tops");
+    const anchorBottoms = anchors.filter((item) => item.category === "Bottoms");
+    const topOptions = anchorTops.length ? anchorTops : tops;
+    const bottomOptions = anchorBottoms.length ? anchorBottoms : bottoms;
     const generated: Outfit[] = [];
 
-    if (tops.length && bottoms.length) {
-      for (const top of tops) {
-        for (const bottom of bottoms) {
-          const pieces = [top, bottom];
-          const shoe = shoes.find((item) => !pieces.some((piece) => piece.id === item.id));
-          const addOn = addOns.find((item) => !pieces.some((piece) => piece.id === item.id));
-          if (shoe) pieces.push(shoe);
-          if (addOn) pieces.push(addOn);
+    if (topOptions.length && bottomOptions.length) {
+      for (const top of topOptions) {
+        for (const bottom of bottomOptions) {
+          const pieces: WardrobeItem[] = [];
+          const addUnique = (item: WardrobeItem) => {
+            if (!pieces.some((piece) => piece.id === item.id)) pieces.push(item);
+          };
+          anchors.forEach(addUnique);
+          addUnique(top);
+          addUnique(bottom);
+
+          // Include one footwear and one accessory option where available.
+          const shoeOptions = anchors.some((item) => item.category === "Shoes")
+            ? anchors.filter((item) => item.category === "Shoes")
+            : shoes.filter((item) => !anchoredIds.has(item.id));
+          const addonOptions = anchors.some((item) =>
+            ["Bags", "Jewellery", "Accessories"].includes(item.category)
+          )
+            ? anchors.filter((item) => ["Bags", "Jewellery", "Accessories"].includes(item.category))
+            : addOns.filter((item) => !anchoredIds.has(item.id));
+
+          const shoe = shoeOptions[generated.length % Math.max(shoeOptions.length, 1)];
+          const addon = addonOptions[generated.length % Math.max(addonOptions.length, 1)];
+          if (shoe) addUnique(shoe);
+          if (addon) addUnique(addon);
+
           generated.push({
             id: crypto.randomUUID(),
             title: "Look " + String(generated.length + 1).padStart(2, "0"),
@@ -241,25 +267,29 @@ export default function Home() {
         if (generated.length >= 12) break;
       }
     } else {
-      for (let first = 0; first < pool.length && generated.length < 12; first += 1) {
-        for (let second = first + 1; second < pool.length && generated.length < 12; second += 1) {
-          const pieces = [pool[first], pool[second]];
-          const extra = pool.find((item) => !pieces.some((piece) => piece.id === item.id));
-          if (extra) pieces.push(extra);
-          generated.push({
-            id: crypto.randomUUID(),
-            title: "Look " + String(generated.length + 1).padStart(2, "0"),
-            items: pieces
-          });
-        }
+      // If pieces are still Unsorted, make neutral boards from real wardrobe
+      // photos while preserving every selected anchor.
+      const remainder = items.filter((item) => !anchoredIds.has(item.id));
+      for (let index = 0; index < remainder.length && generated.length < 12; index += 1) {
+        const pieces = [...anchors, remainder[index]];
+        const extra = remainder.find((item, candidateIndex) =>
+          candidateIndex !== index && !pieces.some((piece) => piece.id === item.id)
+        );
+        if (extra) pieces.push(extra);
+        if (pieces.length < 2) continue;
+        generated.push({
+          id: crypto.randomUUID(),
+          title: "Look " + String(generated.length + 1).padStart(2, "0"),
+          items: pieces
+        });
       }
     }
 
     setOutfits(generated);
     setView("stylist");
     setNotice(generated.length
-      ? generated.length + " outfit combinations using your actual wardrobe photos. " + mood + " · " + occasion + "."
-      : "Add tops and bottoms, or select a few different pieces, to build outfit combinations.");
+      ? generated.length + " outfit boards built from your exact wardrobe photos. " + mood + " · " + occasion + "."
+      : "Add or categorise more clothes to create outfit combinations.");
   }
 
   async function saveOutfit(outfit: Outfit) {
