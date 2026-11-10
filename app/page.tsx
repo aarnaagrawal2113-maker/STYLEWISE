@@ -2,26 +2,17 @@
 
 import { ChangeEvent, useMemo, useRef, useState } from "react";
 
-type Category = "All items" | "Tops" | "Bottoms" | "Shoes" | "Jewellery" | "Bags" | "Accessories";
+type Category = "All items" | "Unsorted" | "Tops" | "Bottoms" | "Shoes" | "Jewellery" | "Bags" | "Accessories";
 type WardrobeItem = { id: string; name: string; category: Exclude<Category, "All items">; color: string; image: string; isNew?: boolean };
 
-const initialItems: WardrobeItem[] = [
-  { id: "1", name: "Everyday white tee", category: "Tops", color: "White", image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=700&q=85" },
-  { id: "2", name: "Relaxed black tee", category: "Tops", color: "Black", image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=700&q=85" },
-  { id: "3", name: "Classic blue denim", category: "Bottoms", color: "Blue", image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=700&q=85" },
-  { id: "4", name: "Tailored neutral trousers", category: "Bottoms", color: "Beige", image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=700&q=85" },
-  { id: "5", name: "Leather ankle boots", category: "Shoes", color: "Black", image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=700&q=85" },
-  { id: "6", name: "Minimal white sneakers", category: "Shoes", color: "White", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=700&q=85" },
-  { id: "7", name: "Gold pendant necklace", category: "Jewellery", color: "Gold", image: "https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=700&q=85" },
-  { id: "8", name: "Everyday shoulder bag", category: "Bags", color: "Tan", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=700&q=85" }
-];
+const initialItems: WardrobeItem[] = [];
 
-const categories: Category[] = ["All items", "Tops", "Bottoms", "Shoes", "Jewellery", "Bags", "Accessories"];
+const categories: Category[] = ["All items", "Unsorted", "Tops", "Bottoms", "Shoes", "Jewellery", "Bags", "Accessories"];
 
 export default function Home() {
   const [items, setItems] = useState<WardrobeItem[]>(initialItems);
   const [activeCategory, setActiveCategory] = useState<Category>("All items");
-  const [selected, setSelected] = useState<string>("1");
+  const [selected, setSelected] = useState<string>("");
   const [view, setView] = useState<"wardrobe" | "stylist">("wardrobe");
   const [mood, setMood] = useState("Effortlessly chic");
   const [occasion, setOccasion] = useState("Everyday");
@@ -33,7 +24,7 @@ export default function Home() {
     () => activeCategory === "All items" ? items : items.filter((item) => item.category === activeCategory),
     [items, activeCategory]
   );
-  const selectedItem = items.find((item) => item.id === selected) ?? items[0];
+  const selectedItem = items.find((item) => item.id === selected);
 
   function addPhotos(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -45,7 +36,7 @@ export default function Home() {
     const additions = images.map((file, index) => ({
       id: `upload-${Date.now()}-${index}`,
       name: file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
-      category: "Tops" as const,
+      category: "Unsorted" as const,
       color: "Not set",
       image: URL.createObjectURL(file),
       isNew: true
@@ -53,7 +44,7 @@ export default function Home() {
     setItems((current) => [...additions, ...current]);
     setSelected(additions[0].id);
     setActiveCategory("All items");
-    setNotice(`${additions.length} photo${additions.length === 1 ? "" : "s"} added. You can edit their categories as we build the full wardrobe tools.`);
+    setNotice(`${additions.length} photo${additions.length === 1 ? "" : "s"} added to your wardrobe. They are in Unsorted for now.`);
     event.target.value = "";
   }
 
@@ -92,7 +83,7 @@ export default function Home() {
           {view === "wardrobe" ? (
             <>
               <section className="welcome-row">
-                <div><p className="eyebrow">MONDAY, YOUR WAY</p><h1>Your wardrobe,<br /><em>reimagined.</em></h1><p className="intro">A thoughtful edit of everything you own — and all the ways to wear it.</p></div>
+                <div><p className="eyebrow">YOUR PERSONAL SPACE</p><h1>Your wardrobe,<br /><em>your style.</em></h1><p className="intro">Add photos of the clothes, shoes and accessories you actually own.</p></div>
                 <div className="welcome-mark"><span>SW</span><small>STYLE IS<br />PERSONAL</small></div>
               </section>
 
@@ -104,8 +95,8 @@ export default function Home() {
 
               <section className="section-heading">
                 <div><p className="eyebrow">THE COLLECTION</p><h2>My wardrobe</h2></div>
-                <button className="primary-button" onClick={() => fileRef.current?.click()}><span>＋</span> Add pieces</button>
-                <input ref={fileRef} className="file-input" type="file" accept="image/*" multiple capture="environment" onChange={addPhotos} />
+                <button className="primary-button" onClick={() => fileRef.current?.click()}><span>＋</span> Take a photo / Upload</button>
+                <input ref={fileRef} className="file-input" type="file" accept="image/*" multiple capture="environment" onChange={addPhotos} aria-label="Take a photo or choose wardrobe photos" />
               </section>
 
               <div className="category-tabs" role="tablist" aria-label="Wardrobe categories">
@@ -113,7 +104,7 @@ export default function Home() {
               </div>
 
               <div className="wardrobe-grid">
-                {filteredItems.map((item) => (
+                {filteredItems.length === 0 ? <div style={{gridColumn:"1 / -1", padding:"42px 24px", border:"1px dashed #c9c7ba", borderRadius:"16px", textAlign:"center"}}><div style={{fontSize:"34px", marginBottom:"12px"}}>＋</div><h3 style={{margin:"0 0 8px"}}>{items.length === 0 ? "Your wardrobe starts here" : "No pieces in this category yet"}</h3><p style={{margin:"0 auto 18px", maxWidth:"380px", color:"#777"}}>{items.length === 0 ? "Take a picture of a favourite outfit piece or choose photos from your gallery. Your real clothes will appear here." : "Add a photo of an item in this category, or switch to All items."}</p><button className="primary-button" onClick={() => fileRef.current?.click()}>＋ Add your first piece</button></div> : filteredItems.map((item) => (
                   <button key={item.id} className={selected === item.id ? "item-card chosen" : "item-card"} onClick={() => setSelected(item.id)}>
                     <div className="item-image"><img src={item.image} alt={item.name} /><span className="item-check">{selected === item.id ? "✓" : "＋"}</span></div>
                     <div className="item-meta"><strong>{item.name}</strong><span>{item.color} · {item.category}</span></div>
