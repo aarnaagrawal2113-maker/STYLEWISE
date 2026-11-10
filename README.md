@@ -8,10 +8,10 @@ A personal digital wardrobe with private accounts and cross-device wardrobe acce
 2. In Supabase Project Settings → API Keys, copy the **publishable** key (or legacy anon key).
 3. In Vercel → Project → Settings → Environment Variables, set:
    - `NEXT_PUBLIC_SUPABASE_URL` to the Supabase Project URL.
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` to the Supabase publishable key (the variable name remains for compatibility).
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to the Supabase publishable key.
 4. Enable Production, Preview and Development environments, then redeploy.
 
-Never use a Supabase service-role key or secret key in a browser-exposed `NEXT_PUBLIC_` variable.
+Never use a Supabase service-role key or `sb_secret_...` key in a browser-exposed `NEXT_PUBLIC_` variable.
 
 ## Current first version
 
